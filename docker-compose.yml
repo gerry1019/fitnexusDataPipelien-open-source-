@@ -1,0 +1,208 @@
+version: "3.9"
+
+services:
+
+  # -----------------------------
+  # POSTGRES (Airflow Metadata DB)
+  # -----------------------------
+  postgres:
+    image: postgres:15
+    container_name: airflow_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # -----------------------------
+  # POSTGRES (Application Source DB)
+  # -----------------------------
+  app_postgres:
+    image: postgres:15
+    container_name: app_postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: myappdb
+    ports:
+      - "5440:5432"
+    volumes:
+      - app_postgres_data:/var/lib/postgresql/data
+
+  # -----------------------------
+  # REDIS (Celery Broker)
+  # -----------------------------
+  redis:
+    image: redis:7.2.4
+    container_name: airflow_redis
+    ports:
+      - "6379:6379"
+
+  # -----------------------------
+  # AIRFLOW BASE IMAGE
+  # -----------------------------
+  airflow-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: airflow-custom:2.10.2-python3.10
+
+  # -----------------------------
+  # AIRFLOW INIT
+  # -----------------------------
+  airflow-init:
+    image: airflow-custom:2.10.2-python3.10
+    container_name: airflow_init
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: "YOUR_RANDOM_FERNET_KEY_HERE"
+
+      # MinIO
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_ENDPOINT_URL: http://minio:9000
+
+      # FIX: Python import path
+      PYTHONPATH: /opt/airflow:/opt/airflow/pipelines
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./pipelines:/opt/airflow/pipelines
+      - ./utils:/opt/airflow/utils
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+    user: "0:0"
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin"
+
+  # -----------------------------
+  # AIRFLOW WEBSERVER
+  # -----------------------------
+  airflow-webserver:
+    image: airflow-custom:2.10.2-python3.10
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+      - airflow-init
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+
+      # FIX: Python import path
+      PYTHONPATH: /opt/airflow:/opt/airflow/pipelines
+
+    command: airflow webserver
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./pipelines:/opt/airflow/pipelines
+      - ./utils:/opt/airflow/utils
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+
+  # -----------------------------
+  # AIRFLOW SCHEDULER
+  # -----------------------------
+  airflow-scheduler:
+    image: airflow-custom:2.10.2-python3.10
+    container_name: airflow_scheduler
+    depends_on:
+      - airflow-init
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+
+      # MinIO
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_ENDPOINT_URL: http://minio:9000
+
+      # FIX: Python import path
+      PYTHONPATH: /opt/airflow:/opt/airflow/pipelines
+
+    command: scheduler
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./pipelines:/opt/airflow/pipelines
+      - ./utils:/opt/airflow/utils
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+
+  # -----------------------------
+  # AIRFLOW WORKER
+  # -----------------------------
+  airflow-worker:
+    image: airflow-custom:2.10.2-python3.10
+    container_name: airflow_worker
+    depends_on:
+      - airflow-init
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+
+      # MinIO
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_ENDPOINT_URL: http://minio:9000
+
+      # FIX: Python import path
+      PYTHONPATH: /opt/airflow:/opt/airflow/pipelines
+
+    command: celery worker
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./pipelines:/opt/airflow/pipelines
+      - ./utils:/opt/airflow/utils
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+
+  # -----------------------------
+  # MINIO (Local S3)
+  # -----------------------------
+  minio:
+    image: minio/minio:RELEASE.2024-01-31T20-20-33Z
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  postgres_data:
+  app_postgres_data:
+  minio-data:
+  airflow_logs:

@@ -1,0 +1,91 @@
+postgres:
+  tables:
+
+    # ------------------------------
+    # HIGH FREQUENCY TABLES (HOURLY)
+    # ------------------------------
+
+    User:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    UserInfo:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    Booking:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    Payment:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    UserMembership:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    Session:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    TrainerSession:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    SessionFeedback:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "hourly"
+
+    # ------------------------------
+    # MEDIUM FREQUENCY TABLES (DAILY)
+    # ------------------------------
+
+    FitnessCenter:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "daily"
+
+    Staff:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "daily"
+
+    Address:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "daily"
+
+    WorkOutDetails:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "daily"
+
+    MembershipPlan:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "daily"
+
+    # ------------------------------
+    # LOW FREQUENCY TABLES (WEEKLY)
+    # ------------------------------
+
+    FitnessCenterSubscription:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "weekly"
+
+    FitnessCenterMembershipPlan:
+      updated_column: "updatedAt"
+      load_type: "incremental"
+      schedule: "weekly"
+
+

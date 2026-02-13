@@ -1,0 +1,17 @@
+TABLE_LIST = {
+    "User": {"updated_column": "updatedAt"},
+    "UserInfo": {"updated_column": "updatedAt"},
+    "FitnessCenter": {"updated_column": "updatedAt"},
+    "Staff": {"updated_column": "updatedAt"},
+    "Address": {"updated_column": "updatedAt"},
+    "Session": {"updated_column": "updatedAt"},
+    "WorkOutDetails": {"updated_column": "updatedAt"},
+    "Booking": {"updated_column": "updatedAt"},
+    "MembershipPlan": {"updated_column": "updatedAt"},
+    "UserMembership": {"updated_column": "updatedAt"},
+    "Payment": {"updated_column": "updatedAt"},
+    "TrainerSession": {"updated_column": "updatedAt"},
+    "SessionFeedback": {"updated_column": "updatedAt"},
+    "FitnessCenterSubscription": {"updated_column": "updatedAt"},
+    "FitnessCenterMembershipPlan": {"updated_column": "updatedAt"},
+}
