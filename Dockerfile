@@ -1,19 +1,22 @@
-# Use official Airflow image which already contains Airflow
 FROM apache/airflow:2.10.2-python3.10
 
-# Switch to root to install system dependencies
 USER root
 
 RUN apt-get update && apt-get install -y \
     build-essential \
+    default-jdk \
     libpq-dev \
     && apt-get clean
 
-# Switch back to airflow user (required)
 USER airflow
 
-# Copy only the requirements
-COPY requirements.txt /requirements.txt
+# 🔥 IMPORTANT: use constraints file so airflow does NOT break
+ARG AIRFLOW_VERSION=2.10.2
+ARG PYTHON_VERSION=3.10
+ARG CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
-# Install Python packages WITHOUT touching airflow internals
-RUN pip install --no-cache-dir -r /requirements.txt
+RUN pip install --no-cache-dir \
+    --constraint "${CONSTRAINT_URL}" \
+    apache-airflow-providers-apache-spark \
+    boto3 \
+    psycopg2-binary
