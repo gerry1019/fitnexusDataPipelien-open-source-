@@ -1,0 +1,36 @@
+from pyspark.sql.functions import *
+from utils.spark_utils import create_spark_session
+from utils.silver_utils import run_silver_stream
+from config.s3_config import S3_CONFIG
+
+PRIMARY_KEY = "id"
+UPDATED_COL = "updatedAt"
+
+bucket = S3_CONFIG["bucket"]
+
+BRONZE_PATH = f"s3a://{bucket}/bronze/Session"
+SILVER_PATH = f"s3a://{bucket}/silver/session"
+CHECKPOINT_PATH = f"s3a://{bucket}/silver/session/_checkpoint"
+
+spark = create_spark_session("Silver Session")
+
+df_stream = spark.readStream.format("delta").load(BRONZE_PATH)
+
+df_clean = (
+    df_stream
+    .withColumn("title", initcap(trim(col("title"))))
+    .withColumn("mode", upper(trim(col("mode"))))
+    .withColumn("startTime", to_timestamp("startTime"))
+    .withColumn("endTime", to_timestamp("endTime"))
+    .withColumn("createdAt", to_timestamp("createdAt"))
+    .withColumn("updatedAt", to_timestamp("updatedAt"))
+    .withColumn(
+        "durationMinutes",
+        round((col("endTime").cast("long") - col("startTime").cast("long")) / 60)
+    )
+    .filter(col(UPDATED_COL).isNotNull())
+    .filter(col(PRIMARY_KEY).isNotNull())
+)
+
+run_silver_stream(df_clean, spark, CHECKPOINT_PATH, SILVER_PATH, PRIMARY_KEY, UPDATED_COL)
+spark.stop()

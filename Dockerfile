@@ -19,4 +19,4 @@ RUN pip install --no-cache-dir \
     --constraint "${CONSTRAINT_URL}" \
     apache-airflow-providers-apache-spark \
     boto3 \
-    psycopg2-binary
+    psycopg2-binary \

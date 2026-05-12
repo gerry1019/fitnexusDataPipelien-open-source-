@@ -1,4 +1,4 @@
-from pyspark.sql.functions import col, max as spark_max
+from pyspark.sql.functions import *
 from datetime import datetime
 
 from config.pipeline_config import TABLE_LIST
@@ -57,8 +57,8 @@ def run_full_ingestion():
             .load()
         )
 
-        # Proper empty check
-        if df.head(1) == []:
+        # Proper empty check (more efficient)
+        if df.rdd.isEmpty():
             print(f"🟡 No new data found for table → {table_name}")
             continue
 
@@ -66,19 +66,19 @@ def run_full_ingestion():
         print(f"📊 Records fetched → {record_count}")
 
         # ---------------------------------------------------------
-        # STEP 3: WRITE TO BRONZE (DATE + TABLE STRUCTURE)
+        # STEP 3: WRITE TO BRONZE (SINGLE ROOT DELTA TABLE)
         # ---------------------------------------------------------
 
-        current_date_str = datetime.now().strftime("%Y-%m-%d")
+        # Add ingestion_date column (industry standard)
+        df = df.withColumn("ingestion_date", current_date())
 
-        bronze_path = (
-            f"s3a://{S3_CONFIG['bucket']}/bronze/"
-            f"{table_name}/{current_date_str}_{table_name}"
-        )
+        bronze_path = f"s3a://{S3_CONFIG['bucket']}/bronze/{table_name}"
 
         (
-            df.write.format("delta")
+            df.write
+            .format("delta")
             .mode("append")
+            .partitionBy("ingestion_date")   # 🔥 Proper partitioning
             .option("mergeSchema", "true")
             .save(bronze_path)
         )
@@ -89,7 +89,7 @@ def run_full_ingestion():
         # STEP 4: UPDATE WATERMARK
         # ---------------------------------------------------------
 
-        new_wm = df.select(spark_max(col(updated_column))).collect()[0][0]
+        new_wm = df.select(max(col(updated_column))).collect()[0][0]
 
         if new_wm:
             set_watermark(table_name, str(new_wm))
